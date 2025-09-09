@@ -1,0 +1,453 @@
+// By : Ahmad Khdair .
+#include <stdio.h>
+#include <malloc.h>
+#include <string.h>
+struct node{
+    int taskID;
+    char taskName[50];
+    char taskDate[12];
+    double taskDuration;
+    int state;
+    struct node* Next;
+};
+// Function For Stacks :
+int isEmpty(struct node* S);
+struct node* createStack( );
+struct node* Pop(struct node* S);
+void makeStackEmpty( struct node* S );
+void Push(struct node* newNode,struct node* S);
+void printStack(struct node* S);
+struct node* Top(struct node* S);
+void fPrintStack(struct node* S,FILE * file);
+void undoLastPerformedTask(struct node* L,struct node* S);
+//  Function For LinkedList
+void printMenu();
+struct node* makeEmpty(struct node* L);
+void performATask(struct node* task, struct node* L,struct node* S);
+void loadTasksFile(struct node*);
+void addNode(struct node* newNode,struct node* L);
+struct node* makeNode(int taskID,char taskName[50],char taskDate[12],double taskDuration);
+struct node* searchByID(int taskID,struct node* L);
+struct node* searchByName(char taskName[50],struct node* L);
+struct node* findPrevious(int X,struct node* L);
+int isLast(struct node* P,struct node* L);
+void removeTask(int X,struct node* L);
+void printList(struct node* L);
+int isEmpty(struct node* L);
+void deleteList(struct node* L);
+void generateSummaryReport(struct node* unperformedList,struct node* performedStack);
+void filePrintList(struct node* L,FILE* file);
+void insertLast(struct node* node,struct node* L);
+int main() {
+    struct node* L = NULL;
+    struct node* S=NULL;
+    L = makeEmpty(L);
+    S=createStack();
+    int choice, taskID,searchType;
+    char taskName[50], taskDate[12];
+    double taskDuration;
+    int flag=0;
+    printf("\nWelcome To Task Management System\n");
+    do{
+        printMenu();
+        scanf("%d",&choice);
+        switch (choice) {
+            case 1:
+                if(!flag){
+                    loadTasksFile(L);
+                    printf("The Task has been successfully loaded");
+                    flag=1;
+                }
+                else
+                    printf("Tasks Has Been Already Loaded");
+                break;
+            case 2:
+                printf("\nEnter Task ID: ");
+                scanf("%d", &taskID);
+                if(taskID>=1){
+                    if( searchByID(taskID,L)==NULL){
+                        printf("\nEnter Task Name: ");
+                        gets(taskName);
+                        gets(taskName);
+                        printf("\nEnter Task Date (DD/MM/YYYY): ");
+                        scanf("%s", taskDate);
+                        printf("\nEnter Task Duration: ");
+                        scanf("%lf", &taskDuration);
+                        addNode(makeNode(taskID,taskName,taskDate,taskDuration),L);
+                        printf("Task with ID : %d  has been successfully added",taskID);
+                    }
+                    else
+                        printf(" The Task With ID:%d Is Already Added",taskID);
+                }
+                else
+                    printf("Invalid Task ID . . ");
+                break;
+            case 3:
+                printf("\nEnter Task ID To Delete It: ");
+                scanf("%d", &taskID);
+                removeTask(taskID,L);
+                break;
+            case 4:
+                searchType=0;
+                printf("\n Two Types of Search, Please Choose One :");
+                printf("\n1. Search For A Task By Task ID");
+                printf("\n2. Search For A Task By Task Name\n");
+                scanf("%d",&searchType);
+                if(searchType==1){
+                    struct node* searchedTask;
+                    printf("Enter Task ID: ");
+                    scanf("%d",&taskID);
+                    searchedTask= searchByID(taskID,L);
+                    if(searchedTask==NULL)
+                        printf("Sorry, No Task With ID :%d",taskID);
+                    else{
+                        printf("Data Of Found Task : Task ID: %d . Task Name: %s . Task Date: %s . Task Duration: %lf \n",searchedTask->taskID,searchedTask->taskName,searchedTask->taskDate,searchedTask->taskDuration);
+                    }
+                }
+                else if(searchType==2) {
+                    struct node *searchedTask;
+                    printf("Enter Task Name: ");
+                    gets(taskName);
+                    gets(taskName); // another gets cuz of the problem of gets, which it read the ENTER
+                    searchedTask = searchByName(taskName, L);
+
+                    if (searchedTask == NULL){
+                        printf("Sorry, No Task With Name :%s", taskName);
+                    }
+                    else {
+                        printf("Data Of Found Task : Task ID:%d . Task Name: %s . Task Date: %s . Task Duration: %lf \n", searchedTask->taskID, searchedTask->taskName,
+                               searchedTask->taskDate, searchedTask->taskDuration);
+                    }
+                }
+                else{
+                    printf("Invalid Type .");
+                }
+                break;
+            case 5:
+                printList(L);
+                break;
+            case 6:
+                printf("Enter Task ID: ");
+                scanf("%d",&taskID);
+                struct node* taskPerformed= searchByID(taskID,L);
+                if(taskPerformed!=NULL){
+                    performATask(taskPerformed,  L, S);
+                    printf("Task With ID: %d Has Been Added As Performed",taskID);
+                }
+                else // if we reach this case, that mean taskPerformed=NULL , So This task doesnt exist at the List To Perform !
+                    printf("No Task With ID: %d To be performed",taskID);
+                break;
+            case 7:
+                undoLastPerformedTask(L,S);
+                break;
+            case 8:
+                printStack(S);
+                break;
+            case 9:
+                generateSummaryReport(L,S);
+                printf("\n Summary Report Is Done . ");
+                break;
+            case 10:
+                return 0;
+            default:
+                printf("Invalid Option . .");
+        }
+    }while (1); // the loop will end if the user enter 10 cuz i put the return 0 at it . .
+}
+void printMenu(){
+    printf("\n\nChoose One Of These Options \n");
+    printf("1. Load Tasks Fil\n");
+    printf("2. Add a New Task\n");
+    printf("3. Delete a Task\n");
+    printf("4. Search for a Task\n");
+    printf("5. View Unperformed Tasks\n");
+    printf("6. Perform a Task\n");
+    printf("7. Undo Last Performed Task\n");
+    printf("8. View Performed Tasks\n");
+    printf("9.Generate Summary Report\n");
+    printf("10. Exit\n");
+    printf("Enter your choice: ");
+}
+struct node* makeEmpty(struct node* L){
+    if(L!=NULL){
+        deleteList(L);
+    }
+    L=(struct node*)malloc(sizeof (struct node));
+    if(L==NULL){
+        printf("out of memory");
+        return NULL;
+    }
+
+    L->Next = NULL;
+    return L;
+}
+void loadTasksFile(struct node* L) {
+    FILE *file = fopen("tasks.txt", "r");
+    if (file == NULL) {
+        printf("error in opening file \n");
+        return;
+    }
+    char line[75]; // this line will contain this task struct : TaskID#TaskName#TaskDate#TaskDuration
+    int taskID;
+    char taskName[50];
+    char taskDate[12];
+    double taskDuration;
+    while (fgets(line, 76, file)!=NULL) { // if fgets function didnt read a line , then it will return a NULL .. i put 76 cuz i let the line contain from 75 char, more one for \0 which it mean end of the string
+        char *token = strtok(line, "#");
+        if (token != NULL)
+            taskID = atoi(token);
+        struct node* searchIt= searchByID(taskID,L);
+        if(searchIt==NULL){
+            token = strtok(NULL, "#");
+            if (token != NULL)
+                strcpy(taskName, token);
+            token = strtok(NULL, "#");
+            if (token != NULL)
+                strcpy(taskDate, token);
+            token = strtok(NULL, "#");
+            if (token != NULL)
+                taskDuration = atof(token);
+            addNode(makeNode(taskID, taskName, taskDate, taskDuration), L);
+        }
+    }
+    fclose(file);
+}
+struct node* makeNode(int taskID,char taskName[50],char taskDate[12],double taskDuration){
+    struct node* new=(struct node*)malloc(sizeof(struct node));
+    if(new==NULL){
+        printf("out of memory");
+        return NULL;
+    }
+    new->taskID=taskID;
+    strcpy(new->taskName,taskName);
+    strcpy(new->taskDate,taskDate);
+    new->taskDuration=taskDuration;
+    new->state = 0; // since i make a new task so surly the state is 0 which its mean that its not performed then undo
+    new->Next=NULL;
+    return new;
+}
+int isLast(struct node* P,struct node* L){
+    return (P!=NULL && P->Next==NULL);
+}
+int isEmpty(struct node* L){
+    return (L!=NULL && L->Next==NULL);
+}
+void insertNode(struct node* newNode,struct node* L,struct node* P){
+    if(P!=NULL&&newNode!=NULL){
+        newNode->Next=P->Next;
+        P->Next=newNode;
+    }
+    else
+        printf("Error At InsertNode");
+}
+void addNode(struct node* newNode,struct node* L){ // this is as insert first,
+    newNode->Next=L->Next; // we let the next of the new node pointer at the first node in the linked list . .
+    L->Next=newNode; // i let the next of the head pointer at the new node
+}
+struct node* searchByID(int taskID,struct node* L){
+    if(L==NULL){
+        printf("invalid Header !!");
+        return NULL;
+    }
+    if(isEmpty(L) ){
+        return NULL;
+    }
+    struct node* P=L->Next;
+    while(P!=NULL && P->taskID!=taskID)
+        P= P->Next;
+    return P;
+}
+struct node* searchByName(char taskName[50],struct node* L){
+    if(L==NULL){
+        printf("invalid Header !!");
+        return NULL;
+    }
+    if(isEmpty(L)){
+        printf("Empty List\n");
+        return NULL;
+    }
+    struct node* P=L->Next;
+    while(P!=NULL && strcmp(P->taskName,taskName)!=0) // here i check each task name, by using strcmp func , it returns 0 if its equal , no need to check if p!=NULL cause i already check it
+        P= P->Next;
+    return P;
+}
+struct node* findPrevious(int X,struct node* L){
+    struct node* P=L;
+    if(P==NULL){
+        printf("Error . P == NULL ");
+        return NULL;
+    }
+    while(P->Next!=NULL && P->Next->taskID != X)
+        P=P->Next;
+    return P;
+}
+void removeTask(int Id,struct node* L){
+    struct node* P= findPrevious(Id,L); // here i get a pointer called P that pointer at the previous node of the node that i want to delete it
+    struct node* tempForNodeWant2Free;
+    if(!isLast(P,L)){ // i put this condition cuz if there is no task with this id , the findPrevious Function will return a pointer at the last node . .
+        tempForNodeWant2Free=P->Next;
+        P->Next=P->Next->Next;
+        free(tempForNodeWant2Free);
+        printf("\nTask with ID : %d  has been successfully deleted",Id);
+    }
+    else{
+        printf("No Task With ID : %d to Delete . .",Id);
+    }
+}
+void deleteList(struct node* L){
+    struct node* temp;
+    struct node* P=L->Next;
+    L->Next= NULL;
+
+    while(P!=NULL){
+        temp=P->Next;
+        free(P);
+        P=temp;
+    }
+}
+void printList(struct node* L){
+    if(isEmpty(L)){
+        printf("There Is No Task To Print . .");
+    }
+    else{
+        struct node* P=L->Next;
+        while(P!=NULL){
+            printf("Task ID:%d . Task Name: %s . Task Date: %s . Task Duration: %lf \n",P->taskID,P->taskName,P->taskDate,P->taskDuration);
+            P=P->Next;
+        }
+    }
+}
+void performATask(struct node* task, struct node* L,struct node* S){
+    struct node* temp= findPrevious(task->taskID,L);
+    struct node* pointerAtTaskWant2Peform=task;
+    temp->Next=task->Next;
+    Push(pointerAtTaskWant2Peform,S);
+}
+
+struct node* createStack( ){
+    struct node* S;
+    S = (struct node*)malloc( sizeof( struct node ) );
+    if( S == NULL )
+        printf( "Out of space!" );
+    S->Next = NULL;
+    makeStackEmpty( S );
+    return S;
+}
+struct node* Pop(struct node* S){ // This Pop Function Do : delete The top from the stack and return not Not FREE it
+    if(S!=NULL){
+        if(isEmpty(S))
+            printf("Empty Stack Pop Function\n");
+        else{
+            struct node* temp=S->Next;
+            S->Next=temp->Next;
+
+            return temp;
+        }
+    }
+    else{
+        printf("Invalid Head");
+    }
+    return NULL;
+}
+void makeStackEmpty( struct node* S ){
+    if( S == NULL )
+        printf( "Out of space!" );
+    else
+        while( !isEmpty( S ))
+            Pop( S );
+}
+void Push(struct node* newNode,struct node* S){
+    newNode->Next=S->Next;
+    S->Next=newNode;
+}
+void printStack(struct node* S) {
+    if (S == NULL)
+        printf("Invalid Head");
+    else if (S->Next == NULL)
+        printf("The Performed Tasks List Is Empty");
+    else {
+        struct node* tempStack=createStack();
+        while(Top(S)!=NULL){
+            Push(Pop(S),tempStack); // when this loop is end, we will have the reverse of the Stack S, so now we can print it and we should get back the nodes for the stack
+        }
+        while(Top(tempStack)!=NULL){
+            printf("Task ID:%d . Task Name: %s . Task Date: %s . Task Duration: %lf \n", Top(tempStack)->taskID, Top(tempStack)->taskName, Top(tempStack)->taskDate, Top(tempStack)->taskDuration);
+            Push(Pop(tempStack),S);
+        }
+    }
+}
+struct node* Top(struct node* S){
+    if(!isEmpty(S))
+        return S->Next;
+    return NULL;
+}
+void undoLastPerformedTask(struct node* L,struct node* S){
+    struct node* temp;
+    temp= Pop(S); // this pop function, i implement it by let the function delete the node from the stack , after that retur it NOT let it free . .
+    if(temp!=NULL){
+        temp->state=1;
+        insertLast(temp,L);
+        printf("The Task Has Been Undo successfully");
+    }
+    else // The Stack Is Empty ( No Performed Tasks )
+        printf("There Is No Performed Task To Undo\n");
+}
+void fPrintStack(struct node* S,FILE * file){
+    struct node* tempStack=createStack();
+    while(Top(S)!=NULL){
+        Push(Pop(S),tempStack);
+    }
+    while(Top(tempStack)!=NULL){
+        fprintf(file,"Task ID: %d , Task Name: %s , Task Date: %s , Task Duration: %lf .\n",Top(tempStack)->taskID,Top(tempStack)->taskName,Top(tempStack)->taskDate,Top(tempStack)->taskDuration);
+        Push(Pop(tempStack),S);
+    }
+}
+void generateSummaryReport(struct node* L, struct node* performedStack){
+    FILE *file= fopen("Report.txt","w");
+    if(file==NULL){
+        printf("Error When Opening File . .");
+        return;
+    }
+    filePrintList(L,file);
+    fprintf(file,"\n\nPerformed Tasks :\n");
+    fPrintStack(performedStack,file); // i should have a special print function , cuz i print a stack so i have condition that i can not reach any node else the first node (The Top)
+    fclose(file);
+}
+
+void filePrintList(struct node* L,FILE* file){
+    struct node* temp=L->Next;
+    struct node* temp2=L->Next;
+    fprintf(file,"Unperformed Tasks :\n");
+    while (temp!=NULL){
+        //if(temp->state!=1) -> if i want to print unpeformed without undone i can do it by this condition . .
+        fprintf(file,"Task ID: %d , Task Name: %s , Task Date: %s , Task Duration: %lf .\n",temp->taskID,temp->taskName,temp->taskDate,temp->taskDuration);
+        temp=temp->Next;
+    }
+    fprintf(file,"\n\nUndo Tasks :\n");
+    while (temp2!=NULL){
+        if(temp2->state==1)
+            fprintf(file,"Task ID: %d , Task Name: %s , Task Date: %s , Task Duration: %lf .\n",temp2->taskID,temp2->taskName,temp2->taskDate,temp2->taskDuration);
+        temp2=temp2->Next;
+    }
+}
+void insertLast(struct node* node,struct node* L){
+    struct node* temp=(struct node*) malloc(sizeof(struct node));
+    if(temp==NULL){
+        printf("out of memory");
+        return;
+    }
+    temp->taskID=node->taskID;// Note That I should take a copy of the node, cuz if i didnt, i will had a problem
+    strcpy(temp->taskName,node->taskName); // cuz the node will be at 2 linked list( performed and unperformed ) , each node should have different next so i should take a copy
+    strcpy(temp->taskDate,node->taskDate);
+    temp->taskDuration=node->taskDuration;
+    temp->state=node->state;
+    temp->Next=NULL;
+    if(L->Next==NULL) // if the list is empty
+        L->Next=temp;
+    else{
+        struct node* P=L->Next;
+        while(P->Next != NULL)
+            P=P->Next;
+        P->Next=temp;
+    }
+}
